@@ -22,7 +22,17 @@ def search(search_text):
         print('No results matched your search')
     else:
         print('Please look up the pairID of your desired security')
-        print('Please use UTC time zone')        
+        print('Please use UTC time zone')
+        print('''
+# an example:
+srch = search('601618')
+start_date = dt(2018,1,1)
+end_date = dt.utcnow()
+pair_id = '166'  # pair id of the stock or security
+freq = 'D'  # data frequency, {5 min: 5, 15 min: 15, 1 hour: 60, 5 hours: 300, ..., 1 day: D, 1 week: W, 1 month: M}
+df = get_data(pair_id=pair_id, freq=freq)
+df.t = [dt.utcfromtimestamp(x) for x in df.t]
+        ''')        
         return(df[['pairId', 'name', 'flag', 'exchange', 'pair_type']])
 
 
