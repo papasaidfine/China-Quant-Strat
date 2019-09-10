@@ -11,7 +11,8 @@ warnings.filterwarnings('ignore')
 
 class MarketWatch:
     def __init__(self, chartingSymbol = 'STOCK/US/XNYS/GE', TimeFrame = 'D10', Step = 'PT1M', StartDate = dt(2019,9,9), EndDate = dt(2019,9,9)):
-        sample_code = '{"Step":"PT1M","TimeFrame":"D10","StartDate":1567987200000,"EndDate":1567987200000,"EntitlementToken":"cecc4267a0194af89ca343805a3e57af","IncludeMockTick":true,"FilterNullSlots":false,"FilterClosedPoints":true,"IncludeClosedSlots":false,"IncludeOfficialClose":true,"InjectOpen":false,"ShowPreMarket":false,"ShowAfterHours":false,"UseExtendedTimeFrame":true,"WantPriorClose":false,"IncludeCurrentQuotes":false,"ResetTodaysAfterHoursPercentChange":false,"Series":[{"Key":"STOCK/US/XNYS/GE","Dialect":"Charting","Kind":"Ticker","SeriesId":"s1","DataTypes":["Open","High","Low","Last"],"Indicators":[{"Parameters":[],"Kind":"Volume","SeriesId":"i3"}]}]}'
+        print('Initializing query ... ')
+        sample_code = '{"Step":"PT1M","TimeFrame":"D5","StartDate":1568073600000,"EndDate":1568073600000,"EntitlementToken":"cecc4267a0194af89ca343805a3e57af","IncludeMockTick":true,"FilterNullSlots":false,"FilterClosedPoints":true,"IncludeClosedSlots":false,"IncludeOfficialClose":true,"InjectOpen":false,"ShowPreMarket":false,"ShowAfterHours":false,"UseExtendedTimeFrame":true,"WantPriorClose":false,"IncludeCurrentQuotes":false,"ResetTodaysAfterHoursPercentChange":false,"Series":[{"Key":"INDEX/US/S&P US/SPX","Dialect":"Charting","Kind":"Ticker","SeriesId":"s1","DataTypes":["Open","High","Low","Last"],"Indicators":[{"Parameters":[],"Kind":"Volume","SeriesId":"i3"}]}]}'
         query = requests.utils.unquote(sample_code)
         j = json.loads(query)  # edit j in variable explorer
         
@@ -25,7 +26,7 @@ class MarketWatch:
         code = requests.utils.quote(query, safe = '')
         ckey = 'cecc4267a0'
         self.url = 'https://api-secure.wsj.net/api/michelangelo/timeseries/history?json=' + code + '&ckey=' + ckey
-        
+        print('OK')
 
     def get_data(self):        
         headers = {
@@ -36,18 +37,20 @@ class MarketWatch:
                 'Referer': 'https://www.marketwatch.com/investing/stock/aapl/charts'
                 }
         
+        print('Requesting data ... ')
         r = requests.get(self.url, headers = headers, verify = False)
         print('status code: %i' % r.status_code)
         
         data = r.json()
+        df = pd.DataFrame()
+        for i in range(len(data['Series'])):
+            df[data['Series'][i]['DesiredDataPoints']] = pd.DataFrame(data['Series'][i]['DataPoints'])
         t = [dt.fromtimestamp(x/1000) for x in data['TimeInfo']['Ticks']]
-        v = pd.DataFrame(data['Series'][1]['DataPoints'])
-        df = pd.DataFrame(data['Series'][0]['DataPoints'])
-        df.columns = ['o', 'h', 'l', 'c']
         df['t'] = t
-        df['v'] = v
         df.set_index('t', inplace=True)
-
+        self.raw = data
+        print('OK')
+        
         return(df)
     
     @classmethod
@@ -76,12 +79,7 @@ data = mktwch.get_data()
 
 
 
-l = MarketWatch.lookup('wuliangye')
 
-## TimeFrame: 1D: 'D1', 10D: 'D10', 1M: 'P29D', 3M: 'P3M', 1Y: 'P1Y', ..., All: 'all'
-## Step: 5Min: 'PT5M', 1Hour: 'PT1H', Daily: 'P1D', Weekly: 'P7D', Monthly: 'P1M'
-mktwch = MarketWatch(chartingSymbol='STOCK/CN/XSHG/600519', TimeFrame = 'D10', Step = 'PT1M', StartDate = dt(2019,9,9), EndDate = dt(2019,9,9))
-data = mktwch.get_data()
 
 
 
@@ -89,7 +87,7 @@ data = mktwch.get_data()
 #%%
 ## for debug
 
-sample_code = '{"Step":"PT1M","TimeFrame":"D10","StartDate":1567987200000,"EndDate":1567987200000,"EntitlementToken":"cecc4267a0194af89ca343805a3e57af","IncludeMockTick":true,"FilterNullSlots":false,"FilterClosedPoints":true,"IncludeClosedSlots":false,"IncludeOfficialClose":true,"InjectOpen":false,"ShowPreMarket":false,"ShowAfterHours":false,"UseExtendedTimeFrame":true,"WantPriorClose":false,"IncludeCurrentQuotes":false,"ResetTodaysAfterHoursPercentChange":false,"Series":[{"Key":"STOCK/US/XNYS/GE","Dialect":"Charting","Kind":"Ticker","SeriesId":"s1","DataTypes":["Open","High","Low","Last"],"Indicators":[{"Parameters":[],"Kind":"Volume","SeriesId":"i3"}]}]}'
+sample_code = '{"Step":"P1D","TimeFrame":"P1Y","StartDate":1536537600000,"EndDate":1568073600000,"EntitlementToken":"cecc4267a0194af89ca343805a3e57af","IncludeMockTick":true,"FilterNullSlots":false,"FilterClosedPoints":true,"IncludeClosedSlots":false,"IncludeOfficialClose":true,"InjectOpen":false,"ShowPreMarket":false,"ShowAfterHours":false,"UseExtendedTimeFrame":true,"WantPriorClose":false,"IncludeCurrentQuotes":false,"ResetTodaysAfterHoursPercentChange":false,"Series":[{"Key":"INDEX/US/DOW JONES GLOBAL/DJIA","Dialect":"Charting","Kind":"Ticker","SeriesId":"s1","DataTypes":["Open","High","Low","Last"],"Indicators":[{"Parameters":[{"Name":"Period","Value":"50"}],"Kind":"SimpleMovingAverage","SeriesId":"i2"},{"Parameters":[],"Kind":"Volume","SeriesId":"i3"},{"Parameters":[{"Name":"EMA1","Value":12},{"Name":"EMA2","Value":26},{"Name":"SignalLine","Value":9}],"Kind":"MovingAverageConvergenceDivergence","SeriesId":"i4"},{"Parameters":[{"Name":"Period","Value":12}],"Kind":"Momentum","SeriesId":"i5"}]}]}'
 query = requests.utils.unquote(sample_code)
 j = json.loads(query)  # edit j in variable explorer
 
@@ -105,9 +103,8 @@ headers = {
                 'Dylan2010.EntitlementToken': 'cecc4267a0194af89ca343805a3e57af',
                 'Origin': 'https://www.marketwatch.com',
                 'Referer': 'https://www.marketwatch.com/investing/stock/aapl/charts'
-                }
-        
-    
+}
+
 query = json.dumps(j)
 code = requests.utils.quote(query, safe = '')
 ckey = 'cecc4267a0'
@@ -116,17 +113,6 @@ url = 'https://api-secure.wsj.net/api/michelangelo/timeseries/history?json=' + c
 r = requests.get(url, headers = headers, verify = False)
 r.status_code
 data = r.json()
-
-
-
-
-
-
-
-
-
-
-
 
 
 
